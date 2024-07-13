@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trip Expense Recorder</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #fff; /* Changed to white */
+            color: #000;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            width: 80%;
+            margin: 20px auto;
+            background: #fff; /* Changed to white */
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+            animation: fadeIn 1s;
+        }
+
+        h1,
+        h2 {
+            text-align: center;
+            color: #000; /* Changed to black */
+        }
+
+        label {
+            display: block;
+            margin-top: 10px;
+            color: #000;
+        }
+
+        input,
+        select,
+        textarea {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+            background: #fff;
+            color: #000;
+            border: 1px solid #555;
+        }
+
+        button {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            margin-top: 20px;
+            background-color: #00f;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0055ff;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                width: 90%;
+            }
+
+            input,
+            select,
+            textarea {
+                width: 100%;
+                padding: 8px;
+            }
+
+            button {
+                width: 100%;
+                padding: 10px;
+                font-size: 16px;
+            }
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.0/jspdf.umd.min.js"></script>
+</head>
+
+<body>
+    <div class="container" id="organizerSection">
+        <h1>Trip Expense Recorder</h1>
+        <form id="organizerForm">
+            <label for="organizerName">Organizer Name:</label>
+            <input type="text" id="organizerName" required>
+
+            <label for="tripName">Trip Name:</label>
+            <input type="text" id="tripName" required>
+
+            <label for="startDate">Start Date:</label>
+            <input type="date" id="startDate" required>
+
+            <label for="endDate">End Date:</label>
+            <input type="date" id="endDate" required>
+
+            <button type="button" onclick="showParticipantsSection()">Next</button>
+        </form>
+    </div>
+
+    <div class="container" id="participantsSection" style="display:none;">
+        <h2>Enter Participants</h2>
+        <form id="participantsForm">
+            <label for="totalParticipants">Total Participants:</label>
+            <input type="number" id="totalParticipants" min="1" required>
+
+            <div id="participantNames">
+                <!-- Participant names will be added here dynamically -->
+            </div>
+
+            <button type="button" onclick="generateParticipantFields()">Next</button>
+        </form>
+    </div>
+
+    <div class="container" id="expenseSection" style="display:none;">
+        <h2>Enter Expenses</h2>
+        <div id="participantsExpenses">
+            <!-- Participant expense fields will be added here dynamically -->
+        </div>
+
+        <label for="currency">Currency:</label>
+        <select id="currency">
+            <option value="INR">INR</option>
+            <option value="USD">USD</option>
+        </select>
+
+        <button type="button" onclick="endTrip()">End Trip</button>
+    </div>
+
+    <div class="container" id="resultsSection" style="display:none;">
+        <h2>Expense Summary</h2>
+        <div id="expenseSummary">
+            <!-- Expense summary will be shown here -->
+        </div>
+        <button type="button" onclick="setNextTripReminder()">Set Next Trip Reminder</button>
+        <button type="button" onclick="printSummaryPDF()">Print Summary as PDF</button>
+    </div>
+
+    <script>
+        let participants = [];
+
+        function showParticipantsSection() {
+            document.getElementById('organizerSection').style.display = 'none';
+            document.getElementById('participantsSection').style.display = 'block';
+        }
+
+        function generateParticipantFields() {
+            const totalParticipants = document.getElementById('totalParticipants').value;
+            const participantNamesDiv = document.getElementById('participantNames');
+            participantNamesDiv.innerHTML = ''; // Clear previous fields
+
+            for (let i = 0; i < totalParticipants; i++) {
+                const label = document.createElement('label');
+                label.textContent = `Participant ${i + 1} Name:`;
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.id = `participant${i + 1}`;
+                input.required = true;
+                participantNamesDiv.appendChild(label);
+                participantNamesDiv.appendChild(input);
+            }
+
+            const nextButton = document.createElement('button');
+            nextButton.type = 'button';
+            nextButton.textContent = 'Proceed to Expenses';
+            nextButton.onclick = showExpenseSection;
+            participantNamesDiv.appendChild(nextButton);
+        }
+
+        function showExpenseSection() {
+            const totalParticipants = document.getElementById('totalParticipants').value;
+            for (let i = 0; i < totalParticipants; i++) {
+                const participantName = document.getElementById(`participant${i + 1}`).value;
+                participants.push({ name: participantName, expenses: [] });
+            }
+
+            document.getElementById('participantsSection').style.display = 'none';
+            document.getElementById('expenseSection').style.display = 'block';
+
+            const participantsExpensesDiv = document.getElementById('participantsExpenses');
+            participantsExpensesDiv.innerHTML = ''; // Clear previous fields
+
+            participants.forEach((participant, index) => {
+                const participantDiv = document.createElement('div');
+                participantDiv.className = 'participant';
+
+                const label = document.createElement('label');
+                label.textContent = `${participant.name}'s Expense:`;
+                const inputAmount = document.createElement('input');
+                inputAmount.type = 'number';
+                inputAmount.id = `expense${index + 1}`;
+                inputAmount.min = 0;
+                const inputReason = document.createElement('textarea');
+                inputReason.id = `reason${index + 1}`;
+                inputReason.placeholder = 'Reason for paying';
+                const addButton = document.createElement('button');
+                addButton.type = 'button';
+                addButton.textContent = 'Add Expense';
+                addButton.onclick = () => addExpense(index, inputAmount.value, inputReason.value);
+
+                participantDiv.appendChild(label);
+                participantDiv.appendChild(inputAmount);
+                participantDiv.appendChild(inputReason);
+                participantDiv.appendChild(addButton);
+                participantsExpensesDiv.appendChild(participantDiv);
+            });
+        }
+
+        function addExpense(index, amount, reason) {
+            const currency = document.getElementById('currency').value;
+            participants[index].expenses.push({ amount: parseFloat(amount), currency, reason });
+            alert(`Added ${amount} ${currency} for ${reason} to ${participants[index].name}'s expenses.`);
+            document.getElementById(`expense${index + 1}`).value = ''; // Clear the input field
+            document.getElementById(`reason${index + 1}`).value = ''; // Clear the textarea field
+        }
+
+        function endTrip() {
+            document.getElementById('expenseSection').style.display = 'none';
+            document.getElementById('resultsSection').style.display = 'block';
+
+            const expenseSummaryDiv = document.getElementById('expenseSummary');
+            expenseSummaryDiv.innerHTML = ''; // Clear previous summary
+
+            let totalExpense = 0;
+            participants.forEach(participant => {
+                const participantDiv = document.createElement('div');
+                participantDiv.className = 'participant-summary';
+
+                const nameHeader = document.createElement('h3');
+                nameHeader.textContent = participant.name;
+                participantDiv.appendChild(nameHeader);
+
+                const participantExpenses = participant.expenses.reduce((acc, expense) => {
+                    return acc + expense.amount;
+                }, 0);
+
+                totalExpense += participantExpenses;
+
+                const expensesList = document.createElement('ul');
+                participant.expenses.forEach(expense => {
+                    const expenseItem = document.createElement('li');
+                    expenseItem.textContent = `${expense.amount} ${expense.currency} - ${expense.reason}`;
+                    expensesList.appendChild(expenseItem);
+                });
+
+                participantDiv.appendChild(expensesList);
+                participantDiv.appendChild(document.createElement('hr'));
+
+                const totalText = document.createElement('p');
+                totalText.textContent = `Total Expense: ${participantExpenses} ${participant.expenses.length > 0 ? participant.expenses[0].currency : ''}`;
+                participantDiv.appendChild(totalText);
+
+                expenseSummaryDiv.appendChild(participantDiv);
+            });
+
+            const averageExpense = totalExpense / participants.length;
+            const balances = participants.map(participant => {
+                const participantExpenses = participant.expenses.reduce((acc, expense) => {
+                    return acc + expense.amount;
+                }, 0);
+                return { name: participant.name, balance: participantExpenses - averageExpense };
+            });
+
+            const settlementDiv = document.createElement('div');
+            settlementDiv.className = 'settlement-summary';
+            const settlementHeader = document.createElement('h3');
+            settlementHeader.textContent = 'Settlement Summary';
+            settlementDiv.appendChild(settlementHeader);
+
+            const givers = balances.filter(b => b.balance < 0).map(b => ({ ...b, balance: Math.abs(b.balance) }));
+            const receivers = balances.filter(b => b.balance > 0);
+
+            givers.forEach(giver => {
+                receivers.forEach(receiver => {
+                    if (giver.balance === 0) return;
+                    if (receiver.balance === 0) return;
+
+                    const amount = Math.min(giver.balance, receiver.balance);
+                    giver.balance -= amount;
+                    receiver.balance -= amount;
+
+                    const settlementText = document.createElement('p');
+                    settlementText.textContent = `${giver.name} should give ${amount.toFixed(2)} ${participants[0].expenses.length > 0 ? participants[0].expenses[0].currency : ''} to ${receiver.name}`;
+                    settlementDiv.appendChild(settlementText);
+                });
+            });
+
+            expenseSummaryDiv.appendChild(settlementDiv);
+        }
+
+        function setNextTripReminder() {
+            alert('Next trip reminder set!');
+        }
+
+        function printSummaryPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            const organizerName = document.getElementById('organizerName').value;
+            const tripName = document.getElementById('tripName').value;
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+
+            // Page 1: Trip Details
+            doc.setFillColor(230, 230, 230);
+            doc.rect(10, 10, 190, 280, 'F');
+            doc.setFontSize(20);
+            doc.text("Trip Details", 105, 20, null, null, 'center');
+
+            doc.setFontSize(12);
+            doc.setTextColor(0, 0, 0);
+            doc.setFont("helvetica", "bold");
+            doc.text("Trip Name:", 20, 40);
+            doc.setFont("helvetica", "normal");
+            doc.text(tripName, 100, 40);
+            doc.setFont("helvetica", "bold");
+            doc.text("Organizer Name:", 20, 50);
+            doc.setFont("helvetica", "normal");
+            doc.text(organizerName, 100, 50);
+            doc.setFont("helvetica", "bold");
+            doc.text("Start Date:", 20, 60);
+            doc.setFont("helvetica", "normal");
+            doc.text(startDate, 100, 60);
+            doc.setFont("helvetica", "bold");
+            doc.text("End Date:", 20, 70);
+            doc.setFont("helvetica", "normal");
+            doc.text(endDate, 100, 70);
+            doc.setFont("helvetica", "bold");
+            doc.text("Total Participants:", 20, 80);
+            doc.setFont("helvetica", "normal");
+            doc.text(participants.length.toString(), 100, 80);
+
+            participants.forEach((participant, index) => {
+                doc.setFont("helvetica", "bold");
+                doc.text(`Participant ${index + 1}:`, 20, 90 + index * 10);
+                doc.setFont("helvetica", "normal");
+                doc.text(participant.name, 100, 90 + index * 10);
+            });
+
+            // Page 2: Expense Summary
+            doc.addPage();
+            doc.setFillColor(230, 230, 230);
+            doc.rect(10, 10, 190, 280, 'F');
+            doc.setFontSize(20);
+            doc.text("Expense Summary", 105, 20, null, null, 'center');
+
+            doc.setFontSize(12);
+            doc.setTextColor(0, 0, 0);
+            let yPosition = 40;
+
+            let totalExpense = 0;
+            participants.forEach(participant => {
+                const participantExpenses = participant.expenses.reduce((acc, expense) => {
+                    return acc + expense.amount;
+                }, 0);
+                totalExpense += participantExpenses;
+
+                doc.setFont("helvetica", "bold");
+                doc.text(participant.name, 20, yPosition);
+                yPosition += 10;
+                doc.setFont("helvetica", "normal");
+                participant.expenses.forEach(expense => {
+                    doc.text(`${expense.amount} ${expense.currency} - ${expense.reason}`, 20, yPosition);
+                    yPosition += 10;
+                });
+
+                doc.text(`Total Expense: ${participantExpenses} ${participant.expenses.length > 0 ? participant.expenses[0].currency : ''}`, 20, yPosition);
+                yPosition += 20;
+            });
+
+            const averageExpense = totalExpense / participants.length;
+            const balances = participants.map(participant => {
+                const participantExpenses = participant.expenses.reduce((acc, expense) => acc + expense.amount, 0);
+                return { name: participant.name, balance: participantExpenses - averageExpense };
+            });
+
+            doc.setFont("helvetica", "bold");
+            doc.text(`Total Expense: ${totalExpense} ${participants[0].expenses.length > 0 ? participants[0].expenses[0].currency : ''}`, 20, yPosition);
+            yPosition += 10;
+
+            doc.text("Settlement Summary", 20, yPosition);
+            yPosition += 10;
+
+            const givers = balances.filter(b => b.balance < 0).map(b => ({ ...b, balance: Math.abs(b.balance) }));
+            const receivers = balances.filter(b => b.balance > 0);
+
+            givers.forEach(giver => {
+                receivers.forEach(receiver => {
+                    if (giver.balance === 0) return;
+                    if (receiver.balance === 0) return;
+
+                    const amount = Math.min(giver.balance, receiver.balance);
+                    giver.balance -= amount;
+                    receiver.balance -= amount;
+
+                    doc.setFont("helvetica", "normal");
+                    doc.text(`${giver.name} should give ${amount.toFixed(2)} ${participants[0].expenses.length > 0 ? participants[0].expenses[0].currency : ''} to ${receiver.name}`, 20, yPosition);
+                    yPosition += 10;
+                });
+            });
+
+            doc.save(`${tripName}_Expense_Summary.pdf`);
+        }
+    </script>
+</body>
+
+</html>
