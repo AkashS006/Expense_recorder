@@ -1,158 +1,187 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Trip Expense Recorder</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #fff; /* Changed to white */
-            color: #000;
+        body, html {
+            height: 100%;
             margin: 0;
-            padding: 0;
+        }
+
+        /* Video background styling */
+        .video-bg {
+            position: fixed;
+            right: 0;
+            bottom: 0;
+            min-width: 100%; 
+            min-height: 100%;
+            z-index: -1;
+        }
+
+        .content {
+            position: relative;
+            z-index: 1;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 30px;
         }
 
         .container {
-            width: 80%;
-            margin: 20px auto;
-            background: #fff; /* Changed to white */
-            padding: 20px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
-            animation: fadeIn 1s;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 600px;
+            animation: fadeIn 1.5s;
         }
 
-        h1,
-        h2 {
-            text-align: center;
-            color: #000; /* Changed to black */
+        h1, h2 {
+            color: #5f6caf;
+            margin-bottom: 20px;
         }
 
         label {
-            display: block;
             margin-top: 10px;
-            color: #000;
+            color: #555;
         }
 
-        input,
-        select,
-        textarea {
-            width: 100%;
-            padding: 10px;
-            margin-top: 5px;
-            background: #fff;
-            color: #000;
-            border: 1px solid #555;
+        .btn-primary {
+            background-color: #5f6caf;
+            border-color: #5f6caf;
         }
 
-        button {
-            display: block;
-            width: 100%;
-            padding: 10px;
-            margin-top: 20px;
-            background-color: #00f;
-            color: #fff;
-            border: none;
-            cursor: pointer;
+        .btn-primary:hover {
+            background-color: #4e5a96;
         }
 
-        button:hover {
-            background-color: #0055ff;
+        .error-message {
+            color: red;
+            margin-top: 10px;
+            display: none;
         }
 
         @keyframes fadeIn {
-            from {
-                opacity: 0;
-            }
-
-            to {
-                opacity: 1;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .container {
-                width: 90%;
-            }
-
-            input,
-            select,
-            textarea {
-                width: 100%;
-                padding: 8px;
-            }
-
-            button {
-                width: 100%;
-                padding: 10px;
-                font-size: 16px;
-            }
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.0/jspdf.umd.min.js"></script>
 </head>
 
 <body>
-    <div class="container" id="organizerSection">
-        <h1>Trip Expense Recorder</h1>
-        <form id="organizerForm">
-            <label for="organizerName">Organizer Name:</label>
-            <input type="text" id="organizerName" required>
+    <!-- Video Background -->
+    <video autoplay muted loop class="video-bg">
+        <source src="v1.mp4" type="video/mp4">
+        Your browser does not support HTML5 video.
+    </video>
 
-            <label for="tripName">Trip Name:</label>
-            <input type="text" id="tripName" required>
+    <div class="content">
+        <div class="container" id="organizerSection">
+            <h1>Trip Expense Recorder</h1>
+            <form id="organizerForm">
+                <div class="form-group">
+                    <label for="organizerName">Organizer Name:</label>
+                    <input type="text" id="organizerName" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="tripName">Trip Name:</label>
+                    <input type="text" id="tripName" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="startDate">Start Date:</label>
+                    <input type="date" id="startDate" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="endDate">End Date:</label>
+                    <input type="date" id="endDate" class="form-control" required>
+                </div>
+                <button type="button" class="btn btn-primary btn-block" onclick="validateOrganizerForm()">Next</button>
+                <div class="error-message" id="organizerError">Please enter valid information in all fields.</div>
+            </form>
+        </div>
 
-            <label for="startDate">Start Date:</label>
-            <input type="date" id="startDate" required>
+        <div class="container" id="participantsSection" style="display:none;">
+            <h2>Enter Participants</h2>
+            <form id="participantsForm">
+                <div class="form-group">
+                    <label for="totalParticipants">Total Participants:</label>
+                    <input type="number" id="totalParticipants" class="form-control" min="1" required onchange="generateParticipantFields()">
+                </div>
 
-            <label for="endDate">End Date:</label>
-            <input type="date" id="endDate" required>
+                <div id="participantNames">
+                    <!-- Participant names will be added here dynamically -->
+                </div>
+                <div class="form-group mt-3">
+                    <button type="button" class="btn btn-primary btn-block" onclick="validateParticipantNames()">Proceed to Expenses</button>
+                </div>
+                <div class="error-message" id="participantsError">Please enter valid names for all participants.</div>
+            </form>
+        </div>
 
-            <button type="button" onclick="showParticipantsSection()">Next</button>
-        </form>
-    </div>
-
-    <div class="container" id="participantsSection" style="display:none;">
-        <h2>Enter Participants</h2>
-        <form id="participantsForm">
-            <label for="totalParticipants">Total Participants:</label>
-            <input type="number" id="totalParticipants" min="1" required>
-
-            <div id="participantNames">
-                <!-- Participant names will be added here dynamically -->
+        <div class="container" id="expenseSection" style="display:none;">
+            <h2>Enter Expenses</h2>
+            <div id="participantsExpenses" class="mb-3">
+                <!-- Participant expense fields will be added here dynamically -->
             </div>
 
-            <button type="button" onclick="generateParticipantFields()">Next</button>
-        </form>
-    </div>
+            <label for="currency">Currency:</label>
+            <select id="currency" class="form-control">
+                <option value="INR">INR</option>
+                <option value="USD">USD</option>
+            </select>
 
-    <div class="container" id="expenseSection" style="display:none;">
-        <h2>Enter Expenses</h2>
-        <div id="participantsExpenses">
-            <!-- Participant expense fields will be added here dynamically -->
+            <button type="button" class="btn btn-primary btn-block mt-3" onclick="endTrip()">End Trip</button>
         </div>
 
-        <label for="currency">Currency:</label>
-        <select id="currency">
-            <option value="INR">INR</option>
-            <option value="USD">USD</option>
-        </select>
-
-        <button type="button" onclick="endTrip()">End Trip</button>
-    </div>
-
-    <div class="container" id="resultsSection" style="display:none;">
-        <h2>Expense Summary</h2>
-        <div id="expenseSummary">
-            <!-- Expense summary will be shown here -->
+        <div class="container" id="resultsSection" style="display:none;">
+            <h2>Expense Summary</h2>
+            <div id="expenseSummary">
+                <!-- Expense summary will be shown here -->
+            </div>
+            <button type="button" class="btn btn-secondary btn-block mt-2" onclick="setNextTripReminder()">Set Next Trip Reminder</button>
+            <button type="button" class="btn btn-outline-primary btn-block mt-2" onclick="printSummaryPDF()">Print Summary as PDF</button>
         </div>
-        <button type="button" onclick="setNextTripReminder()">Set Next Trip Reminder</button>
-        <button type="button" onclick="printSummaryPDF()">Print Summary as PDF</button>
     </div>
+
+    <!-- JavaScript including Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 
     <script>
         let participants = [];
+
+        function validateOrganizerForm() {
+            const organizerName = document.getElementById('organizerName').value.trim();
+            const tripName = document.getElementById('tripName').value.trim();
+            const startDate = document.getElementById('startDate').value.trim();
+            const endDate = document.getElementById('endDate').value.trim();
+            const nameRegex = /^[A-Za-z\s]+$/;
+            const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+
+            try {
+                if (!nameRegex.test(organizerName) || !nameRegex.test(tripName)) {
+                    throw new Error("Names must contain only letters and spaces.");
+                }
+                if (!dateRegex.test(startDate) || !dateRegex.test(endDate)) {
+                    throw new Error("Dates must be in valid format (YYYY-MM-DD).");
+                }
+
+                document.getElementById('organizerError').style.display = 'none';
+                showParticipantsSection();
+            } catch (error) {
+                document.getElementById('organizerError').style.display = 'block';
+                console.error(error.message);
+            }
+        }
 
         function showParticipantsSection() {
             document.getElementById('organizerSection').style.display = 'none';
@@ -160,7 +189,8 @@
         }
 
         function generateParticipantFields() {
-            const totalParticipants = document.getElementById('totalParticipants').value;
+            participants = []; // Reset participants
+            const totalParticipants = parseInt(document.getElementById('totalParticipants').value);
             const participantNamesDiv = document.getElementById('participantNames');
             participantNamesDiv.innerHTML = ''; // Clear previous fields
 
@@ -170,25 +200,34 @@
                 const input = document.createElement('input');
                 input.type = 'text';
                 input.id = `participant${i + 1}`;
+                input.className = 'form-control mb-2';
                 input.required = true;
                 participantNamesDiv.appendChild(label);
                 participantNamesDiv.appendChild(input);
             }
+        }
 
-            const nextButton = document.createElement('button');
-            nextButton.type = 'button';
-            nextButton.textContent = 'Proceed to Expenses';
-            nextButton.onclick = showExpenseSection;
-            participantNamesDiv.appendChild(nextButton);
+        function validateParticipantNames() {
+            const totalParticipants = parseInt(document.getElementById('totalParticipants').value);
+            const nameRegex = /^[A-Za-z\s]+$/;
+            try {
+                for (let i = 0; i < totalParticipants; i++) {
+                    const participantName = document.getElementById(`participant${i + 1}`).value.trim();
+                    if (!nameRegex.test(participantName)) {
+                        throw new Error("Participant names must contain only letters and spaces.");
+                    }
+                    participants.push({ name: participantName, expenses: [] });
+                }
+
+                document.getElementById('participantsError').style.display = 'none';
+                showExpenseSection();
+            } catch (error) {
+                document.getElementById('participantsError').style.display = 'block';
+                console.error(error.message);
+            }
         }
 
         function showExpenseSection() {
-            const totalParticipants = document.getElementById('totalParticipants').value;
-            for (let i = 0; i < totalParticipants; i++) {
-                const participantName = document.getElementById(`participant${i + 1}`).value;
-                participants.push({ name: participantName, expenses: [] });
-            }
-
             document.getElementById('participantsSection').style.display = 'none';
             document.getElementById('expenseSection').style.display = 'block';
 
@@ -197,20 +236,23 @@
 
             participants.forEach((participant, index) => {
                 const participantDiv = document.createElement('div');
-                participantDiv.className = 'participant';
+                participantDiv.className = 'participant mb-3';
 
                 const label = document.createElement('label');
                 label.textContent = `${participant.name}'s Expense:`;
                 const inputAmount = document.createElement('input');
                 inputAmount.type = 'number';
+                inputAmount.className = 'form-control';
                 inputAmount.id = `expense${index + 1}`;
                 inputAmount.min = 0;
                 const inputReason = document.createElement('textarea');
+                inputReason.className = 'form-control mt-2';
                 inputReason.id = `reason${index + 1}`;
                 inputReason.placeholder = 'Reason for paying';
                 const addButton = document.createElement('button');
                 addButton.type = 'button';
                 addButton.textContent = 'Add Expense';
+                addButton.className = 'btn btn-outline-secondary mt-2';
                 addButton.onclick = () => addExpense(index, inputAmount.value, inputReason.value);
 
                 participantDiv.appendChild(label);
@@ -311,53 +353,68 @@
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
 
-            const organizerName = document.getElementById('organizerName').value;
-            const tripName = document.getElementById('tripName').value;
-            const startDate = document.getElementById('startDate').value;
-            const endDate = document.getElementById('endDate').value;
+            const organizerName = document.getElementById('organizerName').value.trim();
+            const tripName = document.getElementById('tripName').value.trim();
+            const startDate = document.getElementById('startDate').value.trim();
+            const endDate = document.getElementById('endDate').value.trim();
+
+            // Define some colors
+            const primaryColor = [63, 81, 181]; // Indigo
+            const secondaryColor = [48, 63, 159]; // Darker Indigo
+            const lightGray = [240, 240, 240];
+
+            // Add background color to pages
+            doc.setFillColor(...lightGray);
+            doc.rect(0, 0, 210, 297, 'F'); // Fills the page with light gray
 
             // Page 1: Trip Details
-            doc.setFillColor(230, 230, 230);
-            doc.rect(10, 10, 190, 280, 'F');
-            doc.setFontSize(20);
-            doc.text("Trip Details", 105, 20, null, null, 'center');
+            doc.setFontSize(22);
+            doc.setTextColor(...primaryColor);
+            doc.text("Trip Details", 105, 20, { align: 'center' });
 
             doc.setFontSize(12);
             doc.setTextColor(0, 0, 0);
             doc.setFont("helvetica", "bold");
+            
             doc.text("Trip Name:", 20, 40);
             doc.setFont("helvetica", "normal");
-            doc.text(tripName, 100, 40);
+            doc.text(tripName, 70, 40);
+
             doc.setFont("helvetica", "bold");
             doc.text("Organizer Name:", 20, 50);
             doc.setFont("helvetica", "normal");
-            doc.text(organizerName, 100, 50);
+            doc.text(organizerName, 70, 50);
+
             doc.setFont("helvetica", "bold");
             doc.text("Start Date:", 20, 60);
             doc.setFont("helvetica", "normal");
-            doc.text(startDate, 100, 60);
+            doc.text(startDate, 70, 60);
+
             doc.setFont("helvetica", "bold");
             doc.text("End Date:", 20, 70);
             doc.setFont("helvetica", "normal");
-            doc.text(endDate, 100, 70);
+            doc.text(endDate, 70, 70);
+
             doc.setFont("helvetica", "bold");
             doc.text("Total Participants:", 20, 80);
             doc.setFont("helvetica", "normal");
-            doc.text(participants.length.toString(), 100, 80);
+            doc.text(participants.length.toString(), 70, 80);
 
             participants.forEach((participant, index) => {
                 doc.setFont("helvetica", "bold");
                 doc.text(`Participant ${index + 1}:`, 20, 90 + index * 10);
                 doc.setFont("helvetica", "normal");
-                doc.text(participant.name, 100, 90 + index * 10);
+                doc.text(participant.name, 70, 90 + index * 10);
             });
 
             // Page 2: Expense Summary
             doc.addPage();
-            doc.setFillColor(230, 230, 230);
-            doc.rect(10, 10, 190, 280, 'F');
-            doc.setFontSize(20);
-            doc.text("Expense Summary", 105, 20, null, null, 'center');
+            doc.setFillColor(...lightGray);
+            doc.rect(0, 0, 210, 297, 'F');
+
+            doc.setFontSize(22);
+            doc.setTextColor(...primaryColor);
+            doc.text("Expense Summary", 105, 20, { align: 'center' });
 
             doc.setFontSize(12);
             doc.setTextColor(0, 0, 0);
@@ -368,6 +425,7 @@
                 const participantExpenses = participant.expenses.reduce((acc, expense) => {
                     return acc + expense.amount;
                 }, 0);
+
                 totalExpense += participantExpenses;
 
                 doc.setFont("helvetica", "bold");
@@ -375,11 +433,11 @@
                 yPosition += 10;
                 doc.setFont("helvetica", "normal");
                 participant.expenses.forEach(expense => {
-                    doc.text(`${expense.amount} ${expense.currency} - ${expense.reason}`, 20, yPosition);
+                    doc.text(`- ${expense.amount} ${expense.currency} for ${expense.reason}`, 20, yPosition);
                     yPosition += 10;
                 });
 
-                doc.text(`Total Expense: ${participantExpenses} ${participant.expenses.length > 0 ? participant.expenses[0].currency : ''}`, 20, yPosition);
+                doc.text(`Total Expense: ${participantExpenses.toFixed(2)} ${participant.expenses.length > 0 ? participant.expenses[0].currency : ''}`, 20, yPosition);
                 yPosition += 20;
             });
 
@@ -390,7 +448,7 @@
             });
 
             doc.setFont("helvetica", "bold");
-            doc.text(`Total Expense: ${totalExpense} ${participants[0].expenses.length > 0 ? participants[0].expenses[0].currency : ''}`, 20, yPosition);
+            doc.text(`Total Expense: ${totalExpense.toFixed(2)} ${participants[0].expenses.length > 0 ? participants[0].expenses[0].currency : ''}`, 20, yPosition);
             yPosition += 10;
 
             doc.text("Settlement Summary", 20, yPosition);
@@ -418,5 +476,4 @@
         }
     </script>
 </body>
-
 </html>
